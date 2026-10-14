@@ -2,19 +2,25 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'guidance_dialog.dart';
+import 'tentang_screen.dart';
 import 'level_select_dialog.dart';
 import 'settings_screen.dart';
+import 'loading_screen.dart';
+import 'level_4.dart';
 
-void main() {
+// ============================================================
+// MAIN
+// ============================================================
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setPreferredOrientations([
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
 
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
   runApp(const ToothHeroApp());
 }
@@ -32,7 +38,7 @@ class ToothHeroApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'ToothHero',
       theme: ThemeData(useMaterial3: true, fontFamily: 'Arial'),
-      home: const MainMenuScreen(),
+      home: const LoadingScreen(nextScreen: MainMenuScreen()),
     );
   }
 }
@@ -52,6 +58,11 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   bool showSelectLevel = false;
   bool showGuidance = false;
 
+  void _openLevel4() {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => Level4Screen()));
+  }
+
   // ==========================================================
   // EXIT APP
   // ==========================================================
@@ -61,7 +72,8 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Tombol Exit tersedia saat aplikasi dijalankan di perangkat.',
+            'Tombol Keluar tersedia saat aplikasi '
+            'dijalankan di perangkat.',
           ),
           duration: Duration(seconds: 2),
         ),
@@ -74,203 +86,206 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   // ==========================================================
-  // BUILD
+  // OPEN LEVEL SELECT
+  // ==========================================================
+
+  void _openLevelSelect() {
+    setState(() {
+      showSelectLevel = true;
+    });
+  }
+
+  // ==========================================================
+  // OPEN TENTANG
+  // ==========================================================
+
+  void _openTentang() {
+    setState(() {
+      showGuidance = true;
+    });
+  }
+
+  // ==========================================================
+  // BUILD MAIN MENU
   // ==========================================================
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      body: Stack(
-        children: [
-          // ==================================================
-          // 1. BACKGROUND PENUH
-          // ==================================================
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double screenWidth = constraints.maxWidth;
 
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/background.png',
-              fit: BoxFit.cover,
-            ),
-          ),
+          final double screenHeight = constraints.maxHeight;
 
-          // ==================================================
-          // 2. TOMBOL SETTINGS DAN SHOP
-          // ==================================================
-          Positioned(
-            left: 16,
-            top: 16,
-            child: Row(
-              children: [
-                // ==================================================
-                // TOMBOL SETTINGS
-                // ==================================================
+          return Stack(
+            children: [
+              // ==================================================
+              // 1. BACKGROUND
+              // ==================================================
 
-                GestureDetector(
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/images/bg with tuti.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+
+              // ==================================================
+              // 2. SETTINGS
+              // ==================================================
+              Positioned(
+                left: screenWidth * 0.028,
+                top: screenHeight * 0.055,
+                child: GestureDetector(
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) {
-                          return const SettingsScreen();
-                        },
+                      MaterialPageRoute<void>(
+                        builder: (_) => const SettingsScreen(),
                       ),
                     );
                   },
                   child: _buildTopButton(icon: Icons.settings),
                 ),
+              ),
 
-                const SizedBox(width: 10),
-
-                // ==================================================
-                // TOMBOL SHOP
-                // ==================================================
-                GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Tombol Shop Dipencet!'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                  child: _buildTopButton(icon: Icons.store),
+              // ==================================================
+              // 3. LOGO TOOTH HERO
+              // ==================================================
+              Positioned(
+                right: screenWidth * 0.100,
+                top: screenHeight * 0.018,
+                width: screenWidth * 0.29,
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/judul.png',
+                    width: screenWidth * 0.25,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
 
-          // ==================================================
-          // 3. KARAKTER TUTI
-          // ==================================================
-          Positioned(
-            left: size.width * 0.04,
-            bottom: 5,
-            child: Image.asset(
-              'assets/images/tuti.png',
-              height: size.height * 0.75,
-            ),
-          ),
+              // ==================================================
+              // 4. MENU BUTTON
+              // ==================================================
+              Positioned(
+                right: screenWidth * 0.100,
+                top: screenHeight * 0.340,
+                width: screenWidth * 0.29,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // MULAI
 
-          // ==================================================
-          // 4. LOGO TOOTH HERO
-          // ==================================================
-          Positioned(
-            right: size.width * 0.10,
-            top: size.height * 0.03,
-            child: Image.asset(
-              'assets/images/judul.png',
-              width: size.width * 0.36,
-            ),
-          ),
+                    _buildMenuButton(
+                      imagePath: 'assets/images/mulai.png',
+                      width: screenWidth * 0.18,
+                      onTap: _openLevelSelect,
+                    ),
 
-          // ==================================================
-          // 5. TOMBOL PLAY, GUIDANCE, EXIT
-          // ==================================================
-          Positioned(
-            right: size.width * 0.10,
-            top: size.height * 0.30,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ==================================================
-                // PLAY
-                // ==================================================
+                    SizedBox(height: screenHeight * 0.010),
 
-                GestureDetector(
-                  onTap: () {
+                    // TENTANG
+                    _buildMenuButton(
+                      imagePath: 'assets/images/tentang.png',
+                      width: screenWidth * 0.18,
+                      onTap: _openTentang,
+                    ),
+
+                    SizedBox(height: screenHeight * 0.010),
+
+                    // KELUAR
+                    _buildMenuButton(
+                      imagePath: 'assets/images/keluar.png',
+                      width: screenWidth * 0.18,
+                      onTap: _exitApp,
+                    ),
+                  ],
+                ),
+              ),
+
+              // ==================================================
+              // 5. POPUP LEVEL SELECT
+              // ==================================================
+              if (showSelectLevel)
+                LevelSelectDialog(
+                  onClose: () {
                     setState(() {
-                      showSelectLevel = true;
+                      showSelectLevel = false;
                     });
                   },
-                  child: Image.asset(
-                    'assets/images/play.png',
-                    width: size.width * 0.22,
-                  ),
+                  onLevelSelected: (level) {
+                    if (level == 4) {
+                      _openLevel4();
+                    } else if (level == 5) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Level 5 belum tersedia.'),
+                        ),
+                      );
+                    }
+                  },
                 ),
 
-                SizedBox(height: size.height * 0.018),
-
-                // ==================================================
-                // GUIDANCE
-                // ==================================================
-                GestureDetector(
-                  onTap: () {
+              // ==================================================
+              // 6. POPUP TENTANG
+              // ==================================================
+              if (showGuidance)
+                TentangScreen(
+                  onClose: () {
                     setState(() {
-                      showGuidance = true;
+                      showGuidance = false;
                     });
                   },
-                  child: Image.asset(
-                    'assets/images/guidance.png',
-                    width: size.width * 0.22,
-                  ),
                 ),
-
-                SizedBox(height: size.height * 0.018),
-
-                // ==================================================
-                // EXIT
-                // ==================================================
-                GestureDetector(
-                  onTap: _exitApp,
-                  child: Image.asset(
-                    'assets/images/exit.png',
-                    width: size.width * 0.22,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ==================================================
-          // 6. POPUP SELECT LEVEL
-          // ==================================================
-          if (showSelectLevel)
-            LevelSelectDialog(
-              onClose: () {
-                setState(() {
-                  showSelectLevel = false;
-                });
-              },
-            ),
-
-          // ==================================================
-          // 7. POPUP GUIDANCE
-          // ==================================================
-          if (showGuidance)
-            GuidanceDialog(
-              onClose: () {
-                setState(() {
-                  showGuidance = false;
-                });
-              },
-            ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
 
   // ==========================================================
-  // WIDGET TOMBOL ATAS
+  // MENU BUTTON
+  // ==========================================================
+
+  Widget _buildMenuButton({
+    required String imagePath,
+    required double width,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Image.asset(imagePath, width: width, fit: BoxFit.contain),
+      ),
+    );
+  }
+
+  // ==========================================================
+  // SETTINGS BUTTON
   // ==========================================================
 
   Widget _buildTopButton({required IconData icon}) {
     return Container(
-      width: 84,
-      height: 84,
+      width: 54,
+      height: 54,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            blurRadius: 5,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Icon(icon, color: const Color(0xFF1976D2), size: 48),
+      child: Icon(icon, color: const Color(0xFF1976D2), size: 30),
     );
   }
 }

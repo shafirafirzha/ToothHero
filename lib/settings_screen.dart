@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,15 +14,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double soundVolume = 0.8;
   double musicVolume = 0.4;
 
-  static const Color panelColor = Color(0xFFFFE96B);
   static const Color blueColor = Color(0xFF78B5E8);
-  static const Color darkBlueColor = Color(0xFF287BA8);
+
+  // FONT FREDOKA
+  TextStyle fredoka({
+    double fontSize = 20,
+    FontWeight fontWeight = FontWeight.w600,
+    Color color = Colors.white,
+  }) {
+    return GoogleFonts.fredoka(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    // Ukuran panel menyesuaikan layar.
     final double panelWidth = math.min(size.width * 0.38, 620.0);
 
     final double safePanelWidth = math.max(
@@ -34,9 +45,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // ==================================================
-          // 1. BACKGROUND
-          // ==================================================
+          // ================================================
+          // BACKGROUND
+          // ================================================
 
           Positioned.fill(
             child: Image.asset(
@@ -45,9 +56,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          // ==================================================
-          // 2. PANEL DAN JUDUL SETTINGS
-          // ==================================================
+          // ================================================
+          // TOMBOL KEMBALI DI POJOK KANAN ATAS
+          // ================================================
+          Positioned(
+            top: size.height * 0.035,
+            right: size.width * 0.025,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+              },
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Image.asset(
+                  'assets/images/back rev.png',
+                  width: size.width * 0.055,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+
+          // ================================================
+          // PANEL SETTINGS
+          // ================================================
           Center(
             child: SizedBox(
               width: safePanelWidth,
@@ -55,14 +87,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // ==================================================
-                  // PANEL KUNING
-                  // ==================================================
+                  // ==========================================
+                  // PANEL UTAMA
+                  // ==========================================
 
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: panelColor,
+                        color: const Color(0xFFFFE96B),
                         borderRadius: BorderRadius.circular(45),
                         boxShadow: [
                           BoxShadow(
@@ -72,7 +104,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
-                      child: SingleChildScrollView(
+
+                      // HANYA SLIDER SOUND DAN MUSIC
+                      child: Padding(
                         padding: EdgeInsets.only(
                           left: safePanelWidth * 0.09,
                           right: safePanelWidth * 0.09,
@@ -80,11 +114,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           bottom: 28,
                         ),
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // ==================================================
-                            // 3. SLIDER SOUND
-                            // ==================================================
+                            // SLIDER SOUND
 
                             _buildVolumeRow(
                               icon: Icons.volume_up,
@@ -96,11 +129,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               },
                             ),
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 25),
 
-                            // ==================================================
-                            // 4. SLIDER MUSIC
-                            // ==================================================
+                            // SLIDER MUSIC
                             _buildVolumeRow(
                               icon: Icons.music_note,
                               value: musicVolume,
@@ -110,69 +141,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 });
                               },
                             ),
-
-                            const SizedBox(height: 26),
-
-                            // ==================================================
-                            // 5. TOMBOL ABOUT
-                            // ==================================================
-                            _buildActionButton(
-                              text: 'about',
-                              onPressed: _showAboutDialog,
-                            ),
-
-                            const SizedBox(height: 18),
-
-                            // ==================================================
-                            // 6. TOMBOL BACK
-                            // ==================================================
-                            _buildActionButton(
-                              text: 'back',
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
 
-                  // ==================================================
-                  // 7. JUDUL SETTINGS
-                  // ==================================================
+                  // ==========================================
+                  // JUDUL PENGATURAN DARI ASSET
+                  // ==========================================
                   Positioned(
                     top: -26,
                     left: safePanelWidth * 0.20,
                     right: safePanelWidth * 0.20,
-                    child: Container(
-                      height: 66,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: blueColor,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 5,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'SETTINGS',
-                          style: TextStyle(
-                            fontSize: math.max(
-                              16,
-                              math.min(size.width * 0.022, 30),
-                            ),
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                    child: Image.asset(
+                      'assets/images/pengaturan.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ],
@@ -184,9 +168,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ==========================================================
-  // WIDGET SLIDER SUARA DAN MUSIK
-  // ==========================================================
+  // ========================================================
+  // SLIDER SOUND DAN MUSIC
+  // ========================================================
 
   Widget _buildVolumeRow({
     required IconData icon,
@@ -221,66 +205,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  // ==========================================================
-  // WIDGET TOMBOL ABOUT DAN BACK
-  // ==========================================================
-
-  Widget _buildActionButton({
-    required String text,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: 190,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: blueColor,
-          elevation: 4,
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ==========================================================
-  // ABOUT DIALOG
-  // ==========================================================
-
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('About Tooth Hero'),
-          content: const Text(
-            'Tooth Hero adalah game edukasi '
-            'tentang kesehatan gigi.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
     );
   }
 }

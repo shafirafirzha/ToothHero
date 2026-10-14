@@ -11,6 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  video_player: ^2.14.1
 
 dev_dependencies:
   flutter_test:
@@ -22,3 +24,10 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/Level/
+    - assets/images/assetlevel1/
+    - assets/images/assetlevel2/
+    - assets/images/assetlevel3/
+    - assets/images/assetlevel4/
+    - assets/images/assetlevel5/
+    - assets/images/videos/
