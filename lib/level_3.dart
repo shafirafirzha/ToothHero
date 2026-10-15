@@ -1436,9 +1436,11 @@ class _TilePainter extends CustomPainter {
 // ---------------------------------------------------------------------------
 // Tampilan Selesai (Menggunakan winlevel3.png & Gaya Level 1)
 // ---------------------------------------------------------------------------
+
 class FinishedView extends StatelessWidget {
   final VoidCallback onRestart;
   final VoidCallback onContinue;
+
   const FinishedView({
     super.key,
     required this.onRestart,
@@ -1447,49 +1449,66 @@ class FinishedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Background gambar winlevel3.png
-        Image.asset(
-          'assets/images/assetlevel3/winlevel3.png',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: const Color(0xFFE7F4FF),
-            alignment: Alignment.center,
-            child: const Text(
-              'LEVEL 3 SELESAI!',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF24538F),
-              ),
-            ),
+        // Background kemenangan Level 3
+        Positioned.fill(
+          child: Image.asset(
+            'assets/images/assetlevel3/winlevel3.png',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) {
+              return Container(
+                color: const Color(0xFFE7F4FF),
+                alignment: Alignment.center,
+                child: const Text(
+                  'LEVEL 3 SELESAI!',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF24538F),
+                  ),
+                ),
+              );
+            },
           ),
         ),
-        // Tombol Lanjut di bagian bawah dengan gaya mirip level 1
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
-              child: ElevatedButton(
-                onPressed: onContinue,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3298F5),
+
+        // Tombol Lanjut mengikuti desain Level 1
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: screenSize.height * 0.035,
+          child: Center(
+            child: SizedBox(
+              width: screenSize.width * 0.18,
+              height: screenSize.height * 0.09,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF42BDE3),
                   foregroundColor: Colors.white,
+                  elevation: 4,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 48,
-                    vertical: 14,
+                    horizontal: 12,
+                    vertical: 6,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
+                    side: const BorderSide(color: Colors.white, width: 2),
                   ),
-                  elevation: 4,
                 ),
-                child: const Text(
-                  'Lanjut',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                onPressed: onContinue,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Lanjut',
+                    style: GoogleFonts.fredoka(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),

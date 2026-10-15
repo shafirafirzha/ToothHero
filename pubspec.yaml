@@ -19,6 +19,10 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 
+  flutter:
+    sdk: flutter
+  audioplayers: ^6.8.1
+
 flutter:
   uses-material-design: true
 
@@ -31,3 +35,4 @@ flutter:
     - assets/images/assetlevel4/
     - assets/images/assetlevel5/
     - assets/images/videos/
+    - assets/audio/

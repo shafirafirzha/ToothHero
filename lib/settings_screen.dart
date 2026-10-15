@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'audio_manager.dart';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -11,12 +13,11 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  double soundVolume = 0.8;
-  double musicVolume = 0.4;
-
   static const Color blueColor = Color(0xFF78B5E8);
 
-  // FONT FREDOKA
+  double get soundVolume => AudioManager.instance.sfxVolume;
+  double get musicVolume => AudioManager.instance.bgmVolume;
+
   TextStyle fredoka({
     double fontSize = 20,
     FontWeight fontWeight = FontWeight.w600,
@@ -45,10 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // ================================================
           // BACKGROUND
-          // ================================================
-
           Positioned.fill(
             child: Image.asset(
               'assets/images/background.png',
@@ -56,14 +54,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          // ================================================
-          // TOMBOL KEMBALI DI POJOK KANAN ATAS
-          // ================================================
+          // TOMBOL KEMBALI
           Positioned(
             top: size.height * 0.035,
             right: size.width * 0.025,
             child: GestureDetector(
               onTap: () {
+                AudioManager.instance.playClick();
                 Navigator.pop(context);
               },
               child: MouseRegion(
@@ -77,9 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          // ================================================
           // PANEL SETTINGS
-          // ================================================
           Center(
             child: SizedBox(
               width: safePanelWidth,
@@ -87,10 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // ==========================================
                   // PANEL UTAMA
-                  // ==========================================
-
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
@@ -104,8 +96,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
-
-                      // HANYA SLIDER SOUND DAN MUSIC
                       child: Padding(
                         padding: EdgeInsets.only(
                           left: safePanelWidth * 0.09,
@@ -117,28 +107,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // SLIDER SOUND
-
+                            // SLIDER SOUND EFFECT
                             _buildVolumeRow(
                               icon: Icons.volume_up,
                               value: soundVolume,
                               onChanged: (value) {
-                                setState(() {
-                                  soundVolume = value;
-                                });
+                                setState(() {});
+
+                                AudioManager.instance.setSfxVolume(value);
                               },
                             ),
 
                             const SizedBox(height: 25),
 
-                            // SLIDER MUSIC
+                            // SLIDER MUSIK BACKGROUND
                             _buildVolumeRow(
                               icon: Icons.music_note,
                               value: musicVolume,
                               onChanged: (value) {
-                                setState(() {
-                                  musicVolume = value;
-                                });
+                                setState(() {});
+
+                                AudioManager.instance.setBgmVolume(value);
                               },
                             ),
                           ],
@@ -147,9 +136,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
 
-                  // ==========================================
-                  // JUDUL PENGATURAN DARI ASSET
-                  // ==========================================
+                  // JUDUL PENGATURAN
                   Positioned(
                     top: -26,
                     left: safePanelWidth * 0.20,
@@ -168,10 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ========================================================
   // SLIDER SOUND DAN MUSIC
-  // ========================================================
-
   Widget _buildVolumeRow({
     required IconData icon,
     required double value,
@@ -188,9 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           child: Icon(icon, color: Colors.white, size: 35),
         ),
-
         const SizedBox(width: 16),
-
         Expanded(
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
