@@ -69,14 +69,14 @@ ToothHero/
 ```
 
 
-## 🎯 Project Purpose
+## Project Purpose
 
 Tooth Hero was developed as an educational multimedia project that combines mobile application development with interactive learning. Its purpose is to make dental health education more engaging and accessible to elementary school students.
 
-## 📌 Project Status
+## Project Status
 
 Tooth Hero is a developing Android game project built with Flutter and Dart. The repository contains the application's source code and multimedia assets for its five levels.
 
 ---
 
-**Tooth Hero — Learn, Play, and Keep Your Smile Healthy! 🦷✨**
+**Tooth Hero — Learn, Play, and Keep Your Smile Healthy!**
