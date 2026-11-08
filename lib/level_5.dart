@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'level_progress.dart';
+import 'pause_button.dart';
 
 class Level5Page extends StatefulWidget {
   const Level5Page({super.key});
@@ -14,6 +15,8 @@ class _Level5PageState extends State<Level5Page> {
   int currentQuestion = 0;
   int? selectedAnswer;
   int score = 0;
+
+  bool _paused = false;
 
   final Color navy = const Color(0xFF304F9E);
   final Color borderBlue = const Color(0xFFC8E0F8);
@@ -232,16 +235,12 @@ class _Level5PageState extends State<Level5Page> {
               bottom: 16,
               child: ElevatedButton(
                 onPressed: () {
-                  // Tutup popup terlebih dahulu.
                   Navigator.pop(dialogContext);
 
-                  // Tandai seluruh 5 level sudah selesai.
-                  // Menu menghitung progres dari unlockedLevel - 1.
                   if (unlockedLevelNotifier.value < 6) {
                     unlockedLevelNotifier.value = 6;
                   }
 
-                  // Kembali ke menu pemilihan level.
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
@@ -296,6 +295,54 @@ class _Level5PageState extends State<Level5Page> {
     } else {
       _showSelesaiDialog();
     }
+  }
+
+  // ---- JEDA (PAUSE) ----
+
+  void _openPause() {
+    if (_paused) return;
+    setState(() => _paused = true);
+  }
+
+  void _resumeGame() {
+    if (!mounted) return;
+    setState(() => _paused = false);
+  }
+
+  void _restartLevel() {
+    if (!mounted) return;
+
+    setState(() {
+      _paused = false;
+      currentQuestion = 0;
+      selectedAnswer = null;
+      score = 0;
+    });
+  }
+
+  void _exitLevel() {
+    if (!mounted) return;
+
+    setState(() => _paused = false);
+    Navigator.of(context).maybePop();
+  }
+
+  Widget _buildPauseButton() {
+    return Positioned(
+      top: 8,
+      right: 8,
+      child: PauseButton(onPressed: _openPause),
+    );
+  }
+
+  Widget _buildPauseOverlay() {
+    return Positioned.fill(
+      child: PauseMenu(
+        onResume: _resumeGame,
+        onRestart: _restartLevel,
+        onExit: _exitLevel,
+      ),
+    );
   }
 
   @override
@@ -475,6 +522,12 @@ class _Level5PageState extends State<Level5Page> {
                     ),
                   ),
                 ),
+
+                // TOMBOL PAUSE
+                if (!_paused) _buildPauseButton(),
+
+                // MENU PAUSE
+                if (_paused) _buildPauseOverlay(),
               ],
             ),
           ),

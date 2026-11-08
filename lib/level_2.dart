@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'level_progress.dart';
+import 'pause_button.dart';
 
 class FoodCard {
   final String id;
@@ -101,11 +102,48 @@ class _Level2ScreenState extends State<Level2Screen> {
 
   bool _finished = false;
   bool _lastAnswerCorrect = true;
+  bool _isPaused = false;
 
   int get _progress => _answered.length;
 
+  // Membuka menu pause.
+  void _openPause() {
+    if (_isPaused || _finished) return;
+
+    setState(() {
+      _isPaused = true;
+    });
+  }
+
+  // Melanjutkan permainan.
+  void _resumeGame() {
+    setState(() {
+      _isPaused = false;
+    });
+  }
+
+  // Mengulang permainan dari awal.
+  void _restartGame() {
+    setState(() {
+      _isPaused = false;
+      _finished = false;
+      _lastAnswerCorrect = true;
+
+      _answered.clear();
+      _healthyFoods.clear();
+      _limitedFoods.clear();
+
+      _message = 'Yuk, pilih makanan dan minuman yang baik untuk gigi!';
+    });
+  }
+
+  // Keluar dari Level 2.
+  void _exitLevel() {
+    Navigator.of(context).pop();
+  }
+
   void _dropFood(FoodCard food, bool targetHealthy) {
-    if (_answered.contains(food.id) || _finished) return;
+    if (_isPaused || _answered.contains(food.id) || _finished) return;
 
     if (food.healthy != targetHealthy) {
       SystemSound.play(SystemSoundType.alert);
@@ -222,7 +260,7 @@ class _Level2ScreenState extends State<Level2Screen> {
               // SKOR
               Positioned(
                 top: h * 0.025,
-                right: w * 0.025,
+                right: w * 0.10,
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: w * 0.012,
@@ -257,6 +295,14 @@ class _Level2ScreenState extends State<Level2Screen> {
                   ),
                 ),
               ),
+
+              // TOMBOL PAUSE
+              if (!_finished)
+                Positioned(
+                  top: h * 0.025,
+                  right: w * 0.025,
+                  child: PauseButton(onPressed: _openPause),
+                ),
 
               // KARTU YANG BELUM DI-DRAG
               if (!_finished)
@@ -332,6 +378,14 @@ class _Level2ScreenState extends State<Level2Screen> {
                       ),
                     ],
                   ),
+                ),
+
+              // MENU PAUSE
+              if (_isPaused)
+                PauseMenu(
+                  onResume: _resumeGame,
+                  onRestart: _restartGame,
+                  onExit: _exitLevel,
                 ),
             ],
           );
@@ -505,7 +559,7 @@ class _Level2ScreenState extends State<Level2Screen> {
   }) {
     return DragTarget<String>(
       onWillAcceptWithDetails: (details) {
-        return !_answered.contains(details.data) && !_finished;
+        return !_isPaused && !_answered.contains(details.data) && !_finished;
       },
       onAcceptWithDetails: (details) {
         final FoodCard food = _foods.firstWhere(

@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
 
 import 'level_progress.dart';
+import 'pause_button.dart';
 
 // =============================================================================
 // BAGIAN 1
@@ -26,11 +27,16 @@ const List<String> _videoCandidates = [
 const Duration _videoTimeout = Duration(seconds: 5);
 const BoxFit _videoFit = BoxFit.cover;
 
+/// CARA GAMBAR LATAR + ISI GAME MEMENUHI LAYAR TANPA GEPENG
+///  - BoxFit.cover   -> PENUH satu layar, rasio asli terjaga (tidak gepeng).
+///                      Di layar yang lebih panjang dari 16:9, sedikit bagian
+///                      atas/bawah gambar terpotong. (DEFAULT)
+///  - BoxFit.contain -> Tidak ada yang terpotong, tapi ada bar hitam di tepi.
+/// JANGAN pakai BoxFit.fill: itu yang membuat gambar jadi gepeng.
 const BoxFit _stageFit = BoxFit.cover;
 
 const bool _forceLandscape = true;
 const bool _useBundledFont = false;
-const bool _showSuccessPopup = false;
 const int _correctCount = 5;
 
 // ---- Tombol Popup Default ----
@@ -43,7 +49,7 @@ const double _btnBottom = 590;
 const Color _kRed = Color(0xFFE5484D);
 const Color _kGreen = Color(0xFF3FA34D);
 const Color _kBlue = Color(0xFF4C8DF0);
-const Color _kCyan = Color(0xFF38C2EE); // Warna Cyan Tombol "Lanjut"
+const Color _kCyan = Color(0xFF38C2EE);
 const Color _kBrown = Color(0xFFD2A679);
 const Color _kBrownText = Color(0xFF4E342E);
 const Color _kOrange = Color(0xFFFDD080);
@@ -75,6 +81,8 @@ double _stageScale(Size screen) {
   return _stageFit == BoxFit.cover ? math.max(sx, sy) : math.min(sx, sy);
 }
 
+/// Bagian kanvas yang BENAR-BENAR terlihat di layar (dalam piksel kanvas).
+/// Dipakai agar benda/tulisan tidak jatuh di bagian yang terpotong layar.
 Rect _visibleCanvasRect(Size screen) {
   final s = _stageScale(screen);
   final visW = screen.width / s;
@@ -117,12 +125,6 @@ const _PopupSpec _specTahapBerikutnya = _PopupSpec(
 );
 
 const _PopupSpec _specMisi = _PopupSpec('popup_misi.png', 'Ayo', _BtnKind.blue);
-
-const _PopupSpec _specBerhasil = _PopupSpec(
-  'popup_berhasil.png',
-  'OK',
-  _BtnKind.blue,
-);
 
 const _PopupSpec _wrongBuku = _PopupSpec(
   'popup_buku_salah4.png',
@@ -271,9 +273,14 @@ class _LineSpec {
 // =============================================================================
 
 class Level4Screen extends StatefulWidget {
-  const Level4Screen({super.key, this.onLevelCompleted});
+  const Level4Screen({super.key, this.onLevelCompleted, this.onExit});
 
   final VoidCallback? onLevelCompleted;
+
+  /// Dipanggil saat pemain menekan "Keluar" di papan jeda.
+  /// Jika dikosongkan, game kembali ke layar sebelumnya (Navigator.pop), yaitu
+  /// menu pemilihan level bila Level 4 dibuka dengan Navigator.push.
+  final VoidCallback? onExit;
 
   @override
   State<Level4Screen> createState() => _Level4ScreenState();
@@ -286,10 +293,10 @@ class _Level4ScreenState extends State<Level4Screen> {
 
   _Popup? _popup;
 
-  // Video
+  bool _paused = false;
+
   VideoPlayerController? _video;
 
-  // Detektif
   static const double _safeL = 30;
   static const double _safeT = 205;
   static const double _safeR = 765;
@@ -298,10 +305,9 @@ class _Level4ScreenState extends State<Level4Screen> {
   static const int _cols = 4;
   static const int _rows = 3;
 
-  late final List<_DetectiveItem> _items;
+  late List<_DetectiveItem> _items;
   final List<String> _foundItems = [];
 
-  // Cocokkan
   static const double _foodD = 190;
 
   static const List<_Food> _foods = [
@@ -310,7 +316,7 @@ class _Level4ScreenState extends State<Level4Screen> {
       file: 'cake.png',
       cx: 165,
       cy: 132,
-      effect: 'Meningkatkan risiko gigi berlubang.',
+      effect: 'Teksturnya yang lembut bisa meninggalkan sisa di gigi.',
       info: _infoCake,
     ),
     _Food(
@@ -318,7 +324,7 @@ class _Level4ScreenState extends State<Level4Screen> {
       file: 'eskrim.png',
       cx: 400,
       cy: 134,
-      effect: 'Bisa membuat gigi ngilu.',
+      effect: 'Rasanya yang dingin bisa membuat gigi terasa ngilu.',
       info: _infoEskrim,
     ),
     _Food(
@@ -326,7 +332,7 @@ class _Level4ScreenState extends State<Level4Screen> {
       file: 'cola.png',
       cx: 634,
       cy: 138,
-      effect: 'Bisa mengikis lapisan luar gigi.',
+      effect: 'Kandungan asamnya bisa merusak pelindung gigi.',
       info: _infoCola,
     ),
     _Food(
@@ -334,7 +340,7 @@ class _Level4ScreenState extends State<Level4Screen> {
       file: 'permen.png',
       cx: 872,
       cy: 138,
-      effect: 'Membuat gigi berlubang.',
+      effect: 'Teksturnya yang lengket bisa menempel di gigi dan membuat gigi berlubang.',
       info: _infoPermen,
     ),
     _Food(
@@ -342,20 +348,20 @@ class _Level4ScreenState extends State<Level4Screen> {
       file: 'cokelat.png',
       cx: 1097,
       cy: 138,
-      effect: 'Meningkatkan risiko gigi berlubang.',
+      effect: 'Sisanya bisa masuk ke sela-sela gigi dan sulit dibersihkan.',
       info: _infoCokelat,
     ),
   ];
 
   static final List<Rect> _pillRects = [
-    Rect.fromLTWH(50, 564, 220, 68),
-    Rect.fromLTWH(283, 564, 220, 68),
-    Rect.fromLTWH(520, 564, 220, 68),
-    Rect.fromLTWH(757, 564, 220, 68),
-    Rect.fromLTWH(995, 564, 220, 68),
+    Rect.fromLTWH(50, 500, 220, 132),
+    Rect.fromLTWH(283, 500, 220, 132),
+    Rect.fromLTWH(520, 500, 220, 132),
+    Rect.fromLTWH(757, 500, 220, 132),
+    Rect.fromLTWH(995, 500, 220, 132),
   ];
 
-  late final List<_Food> _targetOrder;
+  late List<_Food> _targetOrder;
   final Map<String, int> _matched = {};
 
   String? _draggingId;
@@ -489,7 +495,6 @@ class _Level4ScreenState extends State<Level4Screen> {
           )
         else
           const Center(child: CircularProgressIndicator(color: Colors.white)),
-
         Positioned(
           top: 8,
           right: 12,
@@ -594,7 +599,9 @@ class _Level4ScreenState extends State<Level4Screen> {
     _showPopup(
       item.popup,
       onClose: () {
-        if (_foundItems.length >= _correctCount) _showDetectiveEnding();
+        if (_foundItems.length >= _correctCount) {
+          _showDetectiveEnding();
+        }
       },
     );
   }
@@ -636,7 +643,6 @@ class _Level4ScreenState extends State<Level4Screen> {
             for (final item in _items)
               if (!(item.isCorrect && _foundItems.contains(item.id)))
                 _buildDetectiveItem(item, safe),
-
             Positioned(
               left: visible.left + 24,
               top: visible.top + 16,
@@ -680,7 +686,6 @@ class _Level4ScreenState extends State<Level4Screen> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => _onItemTap(item),
-
         child: _img(item.file, fit: BoxFit.contain),
       ),
     );
@@ -711,7 +716,7 @@ class _Level4ScreenState extends State<Level4Screen> {
           children: [
             const ColoredBox(color: Color(0xCC000000)),
             FittedBox(
-              fit: BoxFit.contain, // khusus popup tetap pake contain agar rasio popup aman
+              fit: BoxFit.contain,
               child: SizedBox(
                 width: _canvasW,
                 height: _canvasH,
@@ -750,7 +755,9 @@ class _Level4ScreenState extends State<Level4Screen> {
     _showPopup(
       food.info,
       onClose: () {
-        if (_matched.length == _foods.length) _onAllMatched();
+        if (_matched.length == _foods.length) {
+          _onAllMatched();
+        }
       },
     );
   }
@@ -759,16 +766,13 @@ class _Level4ScreenState extends State<Level4Screen> {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
 
-      if (_showSuccessPopup) {
-        _showPopup(_specBerhasil, onClose: _goCompleted);
-      } else {
-        _goCompleted();
-      }
+      _goCompleted();
     });
   }
 
   void _goCompleted() {
     if (!mounted) return;
+    if (_matched.length != _foods.length) return;
     setState(() => _stage = Level4Stage.completed);
   }
 
@@ -830,10 +834,10 @@ class _Level4ScreenState extends State<Level4Screen> {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: filled ? _kPillDone : _kOrange,
-              borderRadius: BorderRadius.circular(rect.height / 2),
+              borderRadius: BorderRadius.circular(34),
               border: hovering
                   ? Border.all(color: Colors.white, width: 4)
                   : null,
@@ -845,8 +849,11 @@ class _Level4ScreenState extends State<Level4Screen> {
                 child: Text(
                   _targetOrder[i].effect,
                   textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: _fredoka(20, _kBrownText, weight: FontWeight.w500),
+                  style: _fredoka(
+                    20,
+                    _kBrownText,
+                    weight: FontWeight.w500,
+                  ).copyWith(height: 1.15),
                 ),
               ),
             ),
@@ -919,7 +926,6 @@ class _Level4ScreenState extends State<Level4Screen> {
                   ? Border.all(color: _kGreen, width: 6 * scale)
                   : null,
             ),
-            // contain = gambar makanan tidak gepeng di dalam lingkaran
             child: empty ? null : _img(f.file, fit: BoxFit.contain),
           ),
         ),
@@ -938,7 +944,6 @@ class _Level4ScreenState extends State<Level4Screen> {
   void _finishLevel() {
     if (!mounted) return;
 
-    // Buka Level 5 setelah pemain menyelesaikan Level 4.
     if (unlockedLevelNotifier.value < 5) {
       unlockedLevelNotifier.value = 5;
     }
@@ -948,8 +953,6 @@ class _Level4ScreenState extends State<Level4Screen> {
     if (cb != null) {
       cb();
     } else {
-      // Level 4 dibuka dari menu level dengan Navigator.push,
-      // pop akan mengembalikan pemain ke menu pemilihan level.
       Navigator.of(context).pop();
     }
   }
@@ -964,7 +967,6 @@ class _Level4ScreenState extends State<Level4Screen> {
             onTap: _finishLevel,
           ),
         ),
-        // Tombol "Lanjut" diposisikan di tengah bawah kartu
         Positioned(
           left: (1280 - 210) / 2,
           top: 575,
@@ -976,6 +978,68 @@ class _Level4ScreenState extends State<Level4Screen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ---- JEDA (PAUSE) ----
+
+  bool get _showPauseButton =>
+      !_paused &&
+      _popup == null &&
+      (_stage == Level4Stage.detective || _stage == Level4Stage.matching);
+
+  void _openPause() {
+    if (_paused || _popup != null) return;
+    setState(() => _paused = true);
+  }
+
+  void _resumeGame() {
+    if (!mounted) return;
+    setState(() => _paused = false);
+  }
+
+  void _restartLevel() {
+    if (!mounted) return;
+
+    setState(() {
+      _paused = false;
+      _popup = null;
+      _foundItems.clear();
+      _matched.clear();
+      _draggingId = null;
+      _dragPos = null;
+      _items = _buildDetectiveItems();
+      _targetOrder = List<_Food>.of(_foods)..shuffle(_rng);
+
+      // Ulangi permainan dari tahap detektif.
+      _stage = Level4Stage.detective;
+      _popup = const _Popup(_specGuide, _noop);
+    });
+  }
+
+  void _exitLevel() {
+    if (!mounted) return;
+    setState(() => _paused = false);
+
+    final cb = widget.onExit;
+    if (cb != null) {
+      cb();
+    } else {
+      Navigator.of(context).maybePop();
+    }
+  }
+
+  /// Tombol pause menggunakan widget dari pause_button.dart.
+  Widget _buildPauseButton() {
+    return Positioned(
+      top: 0,
+      right: 0,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(top: 14, right: 16),
+          child: PauseButton(onPressed: _openPause),
+        ),
+      ),
     );
   }
 
@@ -1003,7 +1067,14 @@ class _Level4ScreenState extends State<Level4Screen> {
         fit: StackFit.expand,
         children: [
           _buildStage(),
+          if (_showPauseButton) _buildPauseButton(),
           if (_popup != null) _buildPopupOverlay(_popup!),
+          if (_paused)
+            PauseMenu(
+              onResume: _resumeGame,
+              onRestart: _restartLevel,
+              onExit: _exitLevel,
+            ),
         ],
       ),
     );
@@ -1016,11 +1087,21 @@ void _noop() {}
 // BAGIAN 5
 // =============================================================================
 
-Widget _img(String file, {BoxFit fit = BoxFit.contain}) {
-  return Image.asset(_assetPath(file), fit: fit);
+Widget _img(
+  String file, {
+  BoxFit fit = BoxFit.contain,
+  ImageErrorWidgetBuilder? errorBuilder,
+}) {
+  return Image.asset(
+    _assetPath(file),
+    fit: fit,
+    filterQuality: FilterQuality.high,
+    isAntiAlias: true,
+    gaplessPlayback: true,
+    errorBuilder: errorBuilder,
+  );
 }
 
-/// KANVAS 1280x720 YANG MEMENUHI LAYAR.
 class _CanvasStage extends StatelessWidget {
   const _CanvasStage({
     required this.bgFile,
@@ -1112,7 +1193,7 @@ class _PopupButton extends StatelessWidget {
 }
 
 // =============================================================================
-// BAGIAN 6
+// BAGIAN 7 - GARIS PENUNJUK + PANAH (CustomPainter)
 // =============================================================================
 
 class _LinePainter extends CustomPainter {
@@ -1138,6 +1219,7 @@ class _LinePainter extends CustomPainter {
         final p1 =
             l.to -
             Offset(math.cos(angle - 0.45), math.sin(angle - 0.45)) * arrowSize;
+
         final p2 =
             l.to -
             Offset(math.cos(angle + 0.45), math.sin(angle + 0.45)) * arrowSize;

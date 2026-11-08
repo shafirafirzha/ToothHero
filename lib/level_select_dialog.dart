@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'level_1.dart';
 import 'level_2.dart';
 import 'level_3.dart';
-import 'level_4.dart';
+import 'level_4.dart' as level4;
 import 'level_5.dart';
 import 'level_progress.dart';
 
@@ -268,14 +268,14 @@ class LevelSelectDialog extends StatelessWidget {
                       } else if (level == 3) {
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (_) => const Level3Screen(),
+                            builder: (_) => Level3Screen(),
                           ),
                         );
                       } else if (level == 4) {
                         // BUKA GAMEPLAY LEVEL 4
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (_) => const Level4Screen(),
+                            builder: (_) => const level4.Level4Screen(),
                           ),
                         );
                       } else if (level == 5) {

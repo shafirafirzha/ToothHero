@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'level_progress.dart';
+import 'pause_button.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +66,7 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
 
   String _typedText = '';
   bool _showBubble = false;
+  bool _isPaused = false;
 
   final Set<String> _foundItems = {};
 
@@ -180,7 +182,225 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
     });
   }
 
+  // Membuka menu pause.
+  void _openPause() {
+    if (_isPaused || _finishDialogShown) return;
+
+    _typingTimer?.cancel();
+    _bubbleTimer?.cancel();
+
+    setState(() {
+      _isPaused = true;
+      _showBubble = false;
+    });
+  }
+
+  // Melanjutkan permainan.
+  void _resumeGame() {
+    setState(() {
+      _isPaused = false;
+    });
+  }
+
+  // Mengulang permainan dari awal.
+  void _restartGame() {
+    _typingTimer?.cancel();
+    _bubbleTimer?.cancel();
+
+    setState(() {
+      _isPaused = false;
+      _foundItems.clear();
+      _finishDialogShown = false;
+      _showBubble = false;
+      _typedText = '';
+    });
+
+    _startIntro();
+  }
+
+  // Keluar dari Level 1.
+  void _exitLevel() {
+    _typingTimer?.cancel();
+    _bubbleTimer?.cancel();
+
+    Navigator.of(context).pop();
+  }
+
+  // Tombol gambar pada menu pause.
+  Widget _pauseImageButton({
+    required String image,
+    required String fallbackText,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 190,
+        height: 72,
+        child: Image.asset(
+          image,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) {
+            return Container(
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF42BDE3),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: Text(
+                fallbackText,
+                style: GoogleFonts.fredoka(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // Tampilan menu pause.
+  Widget _buildPauseMenu() {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.55),
+        child: Center(
+          child: Container(
+            width: 390,
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 22),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDDF7FF),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'PAUSE',
+                  style: GoogleFonts.fredoka(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF168DB7),
+                  ),
+                ),
+                const SizedBox(height: 15),
+
+                _pauseImageButton(
+                  image: 'assets/images/assetlevel4/lanjutkan.png',
+                  fallbackText: 'Lanjutkan',
+                  onTap: _resumeGame,
+                ),
+
+                const SizedBox(height: 8),
+
+                _pauseImageButton(
+                  image: 'assets/images/assetlevel4/ulangi.png',
+                  fallbackText: 'Ulangi',
+                  onTap: _restartGame,
+                ),
+
+                const SizedBox(height: 8),
+
+                _pauseImageButton(
+                  image: 'assets/images/assetlevel4/kluar.png',
+                  fallbackText: 'Keluar',
+                  onTap: _exitLevel,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Panel hint alat yang harus ditemukan.
+  Widget _buildHintPanel() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF55C7E8), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 5,
+            offset: const Offset(2, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Cari 5 Alat Ini!',
+            style: GoogleFonts.fredoka(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF168DB7),
+            ),
+          ),
+          const SizedBox(height: 5),
+          SizedBox(
+            width: 190,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 5,
+              children: _items.map((item) {
+                final isFound = _foundItems.contains(item.id);
+
+                return Container(
+                  width: 54,
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isFound
+                        ? const Color(0xFFDDF7FF)
+                        : const Color(0xFFEAF0F2),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Image.asset(
+                    item.image,
+                    width: 43,
+                    height: 39,
+                    fit: BoxFit.contain,
+                    color: isFound ? null : Colors.black87,
+                    colorBlendMode: isFound ? null : BlendMode.srcIn,
+                    errorBuilder: (_, __, ___) {
+                      return Icon(
+                        Icons.help_outline,
+                        color: isFound
+                            ? const Color(0xFF168DB7)
+                            : Colors.blueGrey,
+                      );
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onItemTapped(ToothItem item) {
+    if (_isPaused || _foundItems.contains(item.id)) return;
+
     _typingTimer?.cancel();
     _bubbleTimer?.cancel();
 
@@ -341,7 +561,7 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
     SystemSound.play(SystemSoundType.click);
   }
 
-  // Layar kemenangan: menutupi seluruh layar aplikasi.
+  // Layar kemenangan.
   void _showFinishDialog() {
     if (!mounted || _finishDialogShown) return;
 
@@ -364,7 +584,6 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // Background kemenangan full screen.
                 Positioned.fill(
                   child: ClipRect(
                     child: Transform.scale(
@@ -393,8 +612,6 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
                     ),
                   ),
                 ),
-
-                // Tombol Lanjut.
                 Positioned(
                   left: 0,
                   right: 0,
@@ -421,10 +638,7 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
                           ),
                         ),
                         onPressed: () {
-                          // Tutup layar kemenangan terlebih dahulu.
                           Navigator.of(dialogContext).pop();
-
-                          // Buka Level 2 dan kembali ke menu level.
                           _onContinue();
                         },
                         child: FittedBox(
@@ -456,20 +670,6 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
     unlockedLevelNotifier.value = 2;
 
     Navigator.of(context).pop();
-  }
-
-  void _restartGame() {
-    _typingTimer?.cancel();
-    _bubbleTimer?.cancel();
-
-    setState(() {
-      _foundItems.clear();
-      _finishDialogShown = false;
-      _showBubble = false;
-      _typedText = '';
-    });
-
-    _startIntro();
   }
 
   Widget _tapTarget({
@@ -574,10 +774,24 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
                 onTap: _showWrongItemMessage,
               ),
 
-              // Penghitung barang.
+              // Panel hint di kiri atas.
+              Positioned(
+                left: screenWidth * 0.02,
+                top: screenHeight * 0.025,
+                child: _buildHintPanel(),
+              ),
+
+              // Tombol pause dari pause_button.dart.
               Positioned(
                 top: screenHeight * 0.025,
                 right: screenWidth * 0.025,
+                child: PauseButton(onPressed: _openPause),
+              ),
+
+              // Penghitung barang.
+              Positioned(
+                top: screenHeight * 0.025,
+                right: screenWidth * 0.10,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 15,
@@ -603,12 +817,20 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
               ),
 
               // Balon percakapan.
-              if (_showBubble)
+              if (_showBubble && !_isPaused)
                 Positioned(
                   left: screenWidth * 0.265,
                   top: screenHeight * 0.215,
                   width: screenWidth * 0.40,
                   child: IgnorePointer(child: _SpeechBubble(text: _typedText)),
+                ),
+
+              // Tampilan menu pause.
+              if (_isPaused)
+                PauseMenu(
+                  onResume: _resumeGame,
+                  onRestart: _restartGame,
+                  onExit: _exitLevel,
                 ),
             ],
           );
@@ -618,6 +840,8 @@ class _ToothHeroGameState extends State<ToothHeroGame> {
   }
 
   void _showWrongItemMessage() {
+    if (_isPaused) return;
+
     const message =
         'Ups, itu vas bunga! Cari alat yang membantu merawat gigi, ya!';
 

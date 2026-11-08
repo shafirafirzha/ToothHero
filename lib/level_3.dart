@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'level_progress.dart';
+import 'pause_button.dart';
 
 enum CareStage { floss, brush, tongue, rinse }
 
@@ -26,26 +27,13 @@ extension CareStageInfo on CareStage {
   String get instruction {
     switch (this) {
       case CareStage.floss:
-        return 'Tahan benang gigi, lalu gerakkan naik-turun di tiap sela gigi yang ada garis putus-putusnya sampai muncul tanda centang. Gerakkan perlahan, jangan menyentak gusi.';
+        return 'Gerakkan benang gigi naik-turun di tiap sela bergaris putus-putus sampai muncul centang. Pelan-pelan ya, jangan menyentak gusi.';
       case CareStage.brush:
-        return 'Seret pasta gigi sebesar biji jagung ke kepala sikat. Sikat gigi depan dengan gerakan memutar, bagian dalam dari gusi ke arah gigi, dan geraham maju-mundur. Durasi menyikat yang dianjurkan adalah 2 menit.';
+        return 'Seret pasta ke sikat, lalu sikat mengikuti garis: gigi depan memutar, bagian dalam atas-bawah, geraham maju-mundur. Anjuran: 2 menit.';
       case CareStage.tongue:
-        return 'Tahan pembersih lidah dan tarik dari belakang lidah ke depan (ke bawah) mengikuti garis putus-putus.';
+        return 'Tarik pembersih lidah dari belakang lidah ke depan mengikuti garis putus-putus.';
       case CareStage.rinse:
-        return 'Tahan botol obat kumur sebentar untuk membuka tutupnya, lalu seret ke mulut dan gerakkan untuk berkumur. Jangan ditelan.';
-    }
-  }
-
-  String get shortInstruction {
-    switch (this) {
-      case CareStage.floss:
-        return 'Gerakkan floss naik-turun di tiap sela gigi sampai muncul centang.';
-      case CareStage.brush:
-        return 'Durasi menyikat gigi yang dianjurkan adalah 2 menit.';
-      case CareStage.tongue:
-        return 'Tarik scraper dari belakang lidah ke depan mengikuti garis.';
-      case CareStage.rinse:
-        return 'Tahan botol untuk membuka tutup, lalu gerakkan di area mulut. Jangan ditelan.';
+        return 'Tahan botol sampai tutupnya terbuka, lalu gerakkan di area mulut untuk berkumur. Jangan ditelan!';
     }
   }
 }
@@ -211,6 +199,7 @@ class _Level3ScreenState extends State<Level3Screen> {
   static const Color blue = Color(0xFF3198F5);
   static const Color darkBlue = Color(0xFF24538F);
   static const Color paleBlue = Color(0xFFE7F4FF);
+  static const Color green = Color(0xFF43A047);
   static const int tonguePullsNeeded = 3;
 
   static const Map<Tool, Offset> _home = {
@@ -233,6 +222,7 @@ class _Level3ScreenState extends State<Level3Screen> {
   CareStage _stage = CareStage.floss;
   final Set<CareStage> _completed = {};
   bool _showFinished = false;
+  bool _paused = false;
 
   List<_Gap> _gaps = _buildGaps();
   bool _pasteAdded = false;
@@ -308,6 +298,40 @@ class _Level3ScreenState extends State<Level3Screen> {
   int get _flossDone => _gaps.where((g) => g.done).length;
   int get _flossTarget => math.min(MouthLayout.flossGapsRequired, _gaps.length);
   int get _zonesDone => _zoneProgress.where((p) => p >= 1).length;
+
+  // Progres tahap saat ini (0.0 - 1.0)
+  double get _stageProgress {
+    switch (_stage) {
+      case CareStage.floss:
+        return _flossTarget == 0
+            ? 0
+            : (_flossDone / _flossTarget).clamp(0.0, 1.0).toDouble();
+      case CareStage.brush:
+        if (!_pasteAdded) return 0;
+        final sum = _zoneProgress.fold<double>(0, (a, b) => a + b);
+        return (sum / _zoneProgress.length).clamp(0.0, 1.0).toDouble();
+      case CareStage.tongue:
+        return (_tonguePulls / tonguePullsNeeded).clamp(0.0, 1.0).toDouble();
+      case CareStage.rinse:
+        return _rinseProgress.clamp(0.0, 1.0).toDouble();
+    }
+  }
+
+  bool get _stageComplete => _stageProgress >= 1;
+
+  void _pause() {
+    setState(() {
+      _openTimer?.cancel();
+      _held = null; // lepas alat yang sedang dipegang
+      _heldPointer = null;
+      _bottleOpen = false;
+      _paused = true;
+    });
+  }
+
+  void _resume() => setState(() => _paused = false);
+
+  void _exitLevel() => Navigator.of(context).pop();
 
   _BrushZone? _activeZone() {
     for (int i = 0; i < _zoneProgress.length; i++) {
@@ -396,6 +420,7 @@ class _Level3ScreenState extends State<Level3Screen> {
 
   void _restart() {
     setState(() {
+      _paused = false;
       _stage = CareStage.floss;
       _completed.clear();
       _showFinished = false;
@@ -456,6 +481,14 @@ class _Level3ScreenState extends State<Level3Screen> {
                             ],
                           ),
                   ),
+                if (_paused && !_showFinished)
+                  Positioned.fill(
+                    child: PauseMenu(
+                      onResume: _resume,
+                      onRestart: _restart,
+                      onExit: _exitLevel,
+                    ),
+                  ),
               ],
             );
           },
@@ -483,102 +516,85 @@ class _Level3ScreenState extends State<Level3Screen> {
       child: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            // FittedBox = pengaman: kalau layar kecil, isi mengecil otomatis
+            // (tidak perlu scroll dan tidak overflow).
+            child: LayoutBuilder(
+              builder: (context, c) => FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: c.maxWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const CircleAvatar(
-                        backgroundColor: paleBlue,
-                        child: Icon(Icons.health_and_safety, color: blue),
-                      ),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'SIMULASI\nPERAWATAN MULUT',
-                          style: TextStyle(
-                            color: blue,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 19,
+                      Row(
+                        children: [
+                          const CircleAvatar(
+                            backgroundColor: paleBlue,
+                            child: Icon(Icons.health_and_safety, color: blue),
                           ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'SIMULASI\nPERAWATAN MULUT',
+                              style: TextStyle(
+                                color: blue,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 19,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Langkah ${_stageIndex + 1} dari 4',
+                        style: const TextStyle(
+                          color: darkBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Row(
+                        children: List.generate(4, (i) {
+                          final done = _completed.contains(CareStage.values[i]);
+                          final active = i == _stageIndex;
+                          return Expanded(
+                            child: Container(
+                              height: 8,
+                              margin: const EdgeInsets.only(right: 5),
+                              decoration: BoxDecoration(
+                                color: done || active
+                                    ? blue
+                                    : const Color(0xFFD5E0EA),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        _stage.label,
+                        style: const TextStyle(
+                          fontSize: 21,
+                          color: darkBlue,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        _stage.instruction,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          height: 1.35,
+                          color: Color(0xFF315779),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Langkah ${_stageIndex + 1} dari 4',
-                    style: const TextStyle(
-                      color: darkBlue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Row(
-                    children: List.generate(4, (i) {
-                      final done = _completed.contains(CareStage.values[i]);
-                      final active = i == _stageIndex;
-                      return Expanded(
-                        child: Container(
-                          height: 8,
-                          margin: const EdgeInsets.only(right: 5),
-                          decoration: BoxDecoration(
-                            color: done || active
-                                ? blue
-                                : const Color(0xFFD5E0EA),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    _stage.label,
-                    style: const TextStyle(
-                      fontSize: 21,
-                      color: darkBlue,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    _stage.instruction,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.35,
-                      color: Color(0xFF315779),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: paleBlue,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      _stage == CareStage.brush
-                          ? 'Durasi menyikat gigi yang dianjurkan: 2 menit. Gerakkan sikat mengikuti pola pada area gigi.'
-                          : _stage.shortInstruction,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: darkBlue,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Progres: ${_currentProgressText()}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF55738E),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -586,10 +602,13 @@ class _Level3ScreenState extends State<Level3Screen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _completeStage,
+              // null = tombol mati (abu-abu) sampai progres penuh
+              onPressed: _stageComplete ? _completeStage : null,
               style: FilledButton.styleFrom(
-                backgroundColor: blue,
+                backgroundColor: green,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFB8C7D6),
+                disabledForegroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
@@ -606,20 +625,64 @@ class _Level3ScreenState extends State<Level3Screen> {
     );
   }
 
-  String _currentProgressText() {
-    switch (_stage) {
-      case CareStage.floss:
-        return 'sela gigi $_flossDone/$_flossTarget';
-      case CareStage.brush:
-        if (!_pasteAdded) return 'tambahkan pasta ke sikat dulu';
-        final zone = _activeZone();
-        return 'pola $_zonesDone/${MouthLayout.zones.length}'
-            '${zone == null ? ' • selesai' : ' • ${zone.label}'}';
-      case CareStage.tongue:
-        return '$_tonguePulls/$tonguePullsNeeded tarikan scraper';
-      case CareStage.rinse:
-        return 'berkumur ${(_rinseProgress * 100).round()}%';
-    }
+  // Bar progres vertikal di sisi kanan layar
+  Widget _progressBadge() {
+    final p = _stageProgress;
+    final done = p >= 1;
+    final color = done ? green : blue;
+    return IgnorePointer(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        width: 56,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: .95),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: done ? green : const Color(0xFF8ED0FF),
+            width: 3,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              '${(p * 100).round()}%',
+              style: TextStyle(
+                color: done ? green : darkBlue,
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: Container(
+                width: 14,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD5E0EA),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: FractionallySizedBox(
+                  heightFactor: p,
+                  alignment: Alignment.bottomCenter,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Icon(
+              done ? Icons.check_circle : Icons.circle_outlined,
+              color: color,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Size _toolBox(Size sim) => Size(sim.width * .17, sim.height * .19);
@@ -719,26 +782,46 @@ class _Level3ScreenState extends State<Level3Screen> {
               ),
             Positioned(left: 12, right: 12, bottom: 8, child: _toolBar()),
             for (final t in tools) _toolWidget(t, sim),
+
+            // Progres di sisi kanan (di bawah chip & tombol pause)
+            Positioned(
+              right: 16,
+              top: 76,
+              bottom: 104,
+              child: _progressBadge(),
+            ),
+
+            // Chip level + tombol pause
             Positioned(
               right: 16,
               top: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .93),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF8ED0FF), width: 2),
-                ),
-                child: Text(
-                  'Level 3 • ${_completed.length}/4 tahap',
-                  style: const TextStyle(
-                    color: darkBlue,
-                    fontWeight: FontWeight.w800,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .93),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF8ED0FF),
+                        width: 2,
+                      ),
+                    ),
+                    child: Text(
+                      'Level 3 • ${_completed.length}/4 tahap',
+                      style: const TextStyle(
+                        color: darkBlue,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  PauseButton(onPressed: _pause),
+                ],
               ),
             ),
           ],
@@ -1304,7 +1387,7 @@ class _GuidePainter extends CustomPainter {
 
   void _paintDebug(Canvas canvas, Size size) {
     final red = Paint()..color = const Color(0xFFE53935);
-    final green = Paint()
+    final greenP = Paint()
       ..color = const Color(0xFF43A047)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
@@ -1327,7 +1410,7 @@ class _GuidePainter extends CustomPainter {
           z.area.right * size.width,
           z.area.bottom * size.height,
         ),
-        green,
+        greenP,
       );
     }
     for (final r in [MouthLayout.mouthArea, MouthLayout.tongueArea]) {
